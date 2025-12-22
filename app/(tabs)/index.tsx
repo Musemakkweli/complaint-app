@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
   StatusBar,
   StyleSheet,
   TextInput,
@@ -12,19 +13,58 @@ import {
 } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
 
-
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const { theme, toggleTheme } = useTheme();
   const darkMode = theme === "dark";
 
   const router = useRouter();
 
-  const handleLogin = () => {
-    router.replace("/(tabs)/dashboard");
+  // 🔐 LOGIN HANDLER (CONNECTED TO BACKEND)
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter email and password");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+    const response = await fetch("http://192.168.1.89:8000/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert("Login Failed", data.detail || "Invalid credentials");
+        setLoading(false);
+        return;
+      }
+
+      console.log("Login successful:", data);
+
+      // 🔐 Later you can store token here
+      // await AsyncStorage.setItem("token", data.access_token);
+
+      router.replace("/(tabs)/dashboard");
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Network Error", "Cannot connect to server");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -72,7 +112,7 @@ export default function LoginScreen() {
             { color: darkMode ? "#E5E7EB" : "#0EA5E9" },
           ]}
         >
-          CPP
+          Complaint Portal
         </ThemedText>
 
         <ThemedText
@@ -94,11 +134,12 @@ export default function LoginScreen() {
               color: darkMode ? "#E5E7EB" : "#111827",
             },
           ]}
-          placeholder="Email"
+          placeholder="Email or Employee ID"
           keyboardType="email-address"
           placeholderTextColor="#9CA3AF"
           value={email}
           onChangeText={setEmail}
+          autoCapitalize="none"
         />
 
         {/* Password Input */}
@@ -134,9 +175,13 @@ export default function LoginScreen() {
         </View>
 
         {/* Login Button */}
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+        <TouchableOpacity
+          style={[styles.button, loading && { opacity: 0.7 }]}
+          onPress={handleLogin}
+          disabled={loading}
+        >
           <ThemedText type="title" style={styles.buttonText}>
-            Login
+            {loading ? "Logging in..." : "Login"}
           </ThemedText>
         </TouchableOpacity>
       </View>
