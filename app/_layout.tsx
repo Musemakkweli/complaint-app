@@ -9,15 +9,12 @@ function NavigationWrapper() {
   const { theme } = useTheme();
 
   return (
-    <NavigationThemeProvider
-      value={theme === "dark" ? DarkTheme : DefaultTheme}
-    >
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="modal"
-          options={{ presentation: "modal", title: "Modal" }}
-        />
+    <NavigationThemeProvider value={theme === "dark" ? DarkTheme : DefaultTheme}>
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* Start the app at login */}
+        <Stack.Screen name="(tabs)/index" />  {/* login screen */}
+        <Stack.Screen name="(tabs)/dashboard" />  {/* dashboard after login */}
+        <Stack.Screen name="modal" options={{ presentation: "modal", title: "" }} />
       </Stack>
       <StatusBar style={theme === "dark" ? "light" : "dark"} />
     </NavigationThemeProvider>

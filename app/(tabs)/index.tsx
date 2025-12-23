@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
+import { useUser } from "../../context/UserContext"; // <-- import UserContext
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -23,6 +24,7 @@ export default function LoginScreen() {
   const darkMode = theme === "dark";
 
   const router = useRouter();
+  const { setUser } = useUser(); // <-- get setUser from context
 
   // 🔐 LOGIN HANDLER (CONNECTED TO BACKEND)
   const handleLogin = async () => {
@@ -34,7 +36,7 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-    const response = await fetch("http://10.79.216.126:8000/login", {
+      const response = await fetch("http://10.79.216.252:8000/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -55,9 +57,16 @@ export default function LoginScreen() {
 
       console.log("Login successful:", data);
 
-      // 🔐 Later you can store token here
-      // await AsyncStorage.setItem("token", data.access_token);
+      // ✅ Store user in context for dashboard
+      setUser({
+        id: data.user.id,
+        full_name: data.user.fullname,
+        email: data.user.email,
+        role: data.user.role,
+        employee_id: data.user.employee_id,
+      });
 
+      // 🔐 Navigate to dashboard
       router.replace("/(tabs)/dashboard");
     } catch (error) {
       console.error(error);
@@ -97,30 +106,21 @@ export default function LoginScreen() {
         {/* Header */}
         <ThemedText
           type="title"
-          style={[
-            styles.title,
-            { color: darkMode ? "#E5E7EB" : "#0EA5E9" },
-          ]}
+          style={[styles.title, { color: darkMode ? "#E5E7EB" : "#0EA5E9" }]}
         >
           Welcome Back
         </ThemedText>
 
         <ThemedText
           type="subtitle"
-          style={[
-            styles.subtitle,
-            { color: darkMode ? "#E5E7EB" : "#0EA5E9" },
-          ]}
+          style={[styles.subtitle, { color: darkMode ? "#E5E7EB" : "#0EA5E9" }]}
         >
           Complaint Portal
         </ThemedText>
 
         <ThemedText
           type="default"
-          style={[
-            styles.instruction,
-            { color: darkMode ? "#CBD5E1" : "#6B7280" },
-          ]}
+          style={[styles.instruction, { color: darkMode ? "#CBD5E1" : "#6B7280" }]}
         >
           Please enter your email and password to login.
         </ThemedText>
