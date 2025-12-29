@@ -33,7 +33,8 @@ function NavigationWrapper() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <UserProvider>  {/* <-- wrap Navigation with UserProvider */}
+      <UserProvider>
+        {/* Ensure only valid React elements are passed as children */}
         <NavigationWrapper />
       </UserProvider>
     </ThemeProvider>

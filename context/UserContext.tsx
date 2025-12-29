@@ -40,6 +40,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setUserState(null);
   };
 
+  // Debug: log the children type to help diagnose raw text render issues
+  try {
+    // Avoid logging huge objects in production; only log the type/count
+    // eslint-disable-next-line no-console
+    console.log('UserProvider children type:', typeof children, 'count:', React.Children.count(children));
+  } catch (e) {
+    // ignore
+  }
+
   return (
     <UserContext.Provider value={{ user, setUser, clearUser }}>
       {children}
