@@ -1,6 +1,8 @@
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   StatusBar,
@@ -9,10 +11,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { ThemedText } from '../../components/themed-text';
-import { ThemedView } from '../../components/themed-view';
-import { useTheme } from "../../context/ThemeContext";
-import { useUser } from "../../context/UserContext";
+import { useTheme } from "../context/ThemeContext";
+import { useUser } from "../context/UserContext";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -24,7 +24,7 @@ export default function LoginScreen() {
   const darkMode = theme === "dark";
 
   const router = useRouter();
-  const { setUser } = useUser(); // insert user directly here
+  const { setUser } = useUser();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -37,9 +37,7 @@ export default function LoginScreen() {
     try {
       const response = await fetch("http://10.197.223.252:8000/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
@@ -51,18 +49,19 @@ export default function LoginScreen() {
         return;
       }
 
-      // Directly set user into context for instant display
+      console.log("Login successful:", data);
+
+      // ✅ Store user in context
       setUser({
         id: data.user.id,
-        full_name: data.user.fullname, // ensure this matches backend
+        full_name: data.user.fullname,
         email: data.user.email,
         role: data.user.role,
         employee_id: data.user.employee_id,
       });
 
-      // Navigate immediately to dashboard
+      // 🔐 Navigate to dashboard (now outside tabs)
       router.replace("/dashboard");
-
     } catch (error) {
       console.error(error);
       Alert.alert("Network Error", "Cannot connect to server");

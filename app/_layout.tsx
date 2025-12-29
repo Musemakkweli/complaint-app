@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
+import { UserProvider } from "../context/UserContext"; // <-- add UserProvider
 
 function NavigationWrapper() {
   const { theme } = useTheme();
@@ -11,11 +12,19 @@ function NavigationWrapper() {
   return (
     <NavigationThemeProvider value={theme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
-        {/* Start the app at login */}
-        <Stack.Screen name="(tabs)/index" />  {/* login screen */}
-        <Stack.Screen name="(tabs)/dashboard" />  {/* dashboard after login */}
-        <Stack.Screen name="modal" options={{ presentation: "modal", title: "" }} />
+        {/* Start at login */}
+        <Stack.Screen name="index" />  
+
+        {/* Dashboard inside tabs */}
+        <Stack.Screen name="dashboard" />  
+
+        {/* Modal screen */}
+        <Stack.Screen 
+          name="modal" 
+          options={{ presentation: "modal", title: "" }} 
+        />
       </Stack>
+
       <StatusBar style={theme === "dark" ? "light" : "dark"} />
     </NavigationThemeProvider>
   );
@@ -24,7 +33,9 @@ function NavigationWrapper() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <NavigationWrapper />
+      <UserProvider>  {/* <-- wrap Navigation with UserProvider */}
+        <NavigationWrapper />
+      </UserProvider>
     </ThemeProvider>
   );
 }
