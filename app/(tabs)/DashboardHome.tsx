@@ -1,6 +1,5 @@
-import { Entypo, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -16,6 +15,7 @@ import { useUser } from '../../context/UserContext';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2;
+const BASE_URL = 'http://10.197.223.252:8000';
 
 export default function DashboardHome() {
   const { theme } = useTheme();
@@ -23,35 +23,74 @@ export default function DashboardHome() {
   const router = useRouter();
   const { user } = useUser();
 
-  // Ensure we always render a string
-  const userName = user?.full_name ? String(user.full_name) : 'User';
+  /* -------------------- STATE -------------------- */
+  const [stats, setStats] = useState({
+    total: 0,
+    assigned: 0,
+    resolved: 0,
+    pending: 0,
+  });
 
-  const stats = {
-    total: 24,
-    assigned: 10,
-    resolved: 8,
-    pending: 6,
-  };
+  const [trendLabels, setTrendLabels] = useState<string[]>([]);
+  const [complaintTrend, setComplaintTrend] = useState<number[]>([]);
+  const [recentComplaints, setRecentComplaints] = useState<any[]>([]);
 
-  const complaintTrend = [2, 4, 6, 3, 5, 7, 4];
+  /* -------------------- FETCH USER STATS -------------------- */
+  useEffect(() => {
+    if (!user?.id) return;
 
-  const recentComplaints = [
-    { id: 'C001', user: 'John Doe', type: 'Water', status: 'Resolved' },
-    { id: 'C002', user: 'Jane Smith', type: 'Electricity', status: 'Pending' },
-    { id: 'C003', user: 'Paul K.', type: 'Billing', status: 'Assigned' },
-    { id: 'C004', user: 'Alice M.', type: 'Service', status: 'Resolved' },
-  ];
+    fetch(`${BASE_URL}/complaints/stats/user/${user.id}`)
+      .then(res => res.json())
+      .then(data => {
+        setStats({
+          total: data.total_complaints ?? 0,
+          assigned: data.assigned ?? 0,
+          resolved: data.resolved ?? 0,
+          pending: data.pending ?? 0,
+        });
+      })
+      .catch(err => console.error('Stats error:', err));
+  }, [user?.id]);
+
+  /* -------------------- FETCH USER TREND -------------------- */
+  useEffect(() => {
+    if (!user?.id) return;
+
+    fetch(`${BASE_URL}/complaints/trend/user/${user.id}`)
+      .then(res => res.json())
+      .then(data => {
+        setTrendLabels(data.trend.map((t: any) => t.day));
+        setComplaintTrend(data.trend.map((t: any) => t.count));
+      })
+      .catch(err => console.error('Trend error:', err));
+  }, [user?.id]);
+
+  /* -------------------- FETCH RECENT COMMON COMPLAINTS -------------------- */
+  useEffect(() => {
+    fetch(`${BASE_URL}/complaints/recent/common?limit=5`)
+      .then(res => res.json())
+      .then(data => {
+        setRecentComplaints(
+          data.recent_common_complaints.map((c: any) => ({
+            id: c.id,
+            user: c.user_name,
+            type: c.title,
+            status: c.status,
+          }))
+        );
+      })
+      .catch(err => console.error('Recent complaints error:', err));
+  }, []);
 
   const openComplaints = (filter: string) => {
     router.push({ pathname: '/CustomerComplaints', params: { filter } });
   };
 
-  // Render each complaint row
   const renderComplaint = ({ item }: any) => (
     <View style={[styles.tableRow, { backgroundColor: darkMode ? '#1F2937' : '#FFFFFF' }]}>
-      <Text style={[styles.cell, { color: darkMode ? '#F9FAFB' : '#111827' }]}>{String(item.id)}</Text>
-      <Text style={[styles.cell, { color: darkMode ? '#F9FAFB' : '#111827' }]}>{String(item.user)}</Text>
-      <Text style={[styles.cell, { color: darkMode ? '#F9FAFB' : '#111827' }]}>{String(item.type)}</Text>
+      <Text style={[styles.cell, { color: darkMode ? '#F9FAFB' : '#111827' }]}>{item.id}</Text>
+      <Text style={[styles.cell, { color: darkMode ? '#F9FAFB' : '#111827' }]}>{item.user}</Text>
+      <Text style={[styles.cell, { color: darkMode ? '#F9FAFB' : '#111827' }]}>{item.type}</Text>
       <Text
         style={[
           styles.cell,
@@ -65,7 +104,7 @@ export default function DashboardHome() {
           },
         ]}
       >
-        {String(item.status)}
+        {item.status}
       </Text>
     </View>
   );
@@ -74,140 +113,91 @@ export default function DashboardHome() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: darkMode ? '#0B1220' : '#F3F4F6' }]}>
       <FlatList
         data={recentComplaints}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={item => item.id}
+        renderItem={renderComplaint}
         ListHeaderComponent={
           <View style={styles.container}>
-            {/* Header */}
-            <View style={[styles.header, { backgroundColor: '#0056B3' }]}>
+            {/* HEADER */}
+            <View style={styles.header}>
               <Text style={styles.orgText}>EUCL – Customer Complaints System</Text>
               <Text style={styles.dateText}>{new Date().toDateString()}</Text>
               <Text style={styles.welcomeText}>
-                Welcome back, <Text style={styles.boldText}>{userName}</Text>
+                Welcome back, <Text style={styles.boldText}>{user?.full_name ?? 'User'}</Text>
               </Text>
             </View>
 
-            {/* KPI Cards */}
+            {/* KPI CARDS */}
             <View style={styles.cardsContainer}>
               <View style={styles.row}>
-                <StatCard
-                  title="Total"
-                  value={String(stats.total)}
-                  icon={<MaterialIcons name="assignment" size={20} color="#2563EB" />}
-                  onPress={() => openComplaints('all')}
-                  darkMode={darkMode}
-                  topColor="#2563EB"
-                />
-                <StatCard
-                  title="Assigned"
-                  value={String(stats.assigned)}
-                  icon={<FontAwesome5 name="clipboard-list" size={18} color="#2563EB" />}
-                  onPress={() => openComplaints('assigned')}
-                  darkMode={darkMode}
-                  topColor="#2563EB"
-                />
+                <StatCard title="Total" value={stats.total} icon="assignment" onPress={() => openComplaints('all')} />
+                <StatCard title="Assigned" value={stats.assigned} icon="clipboard-list" onPress={() => openComplaints('assigned')} />
               </View>
               <View style={styles.row}>
-                <StatCard
-                  title="Resolved"
-                  value={String(stats.resolved)}
-                  icon={<Entypo name="check" size={20} color="#16A34A" />}
-                  onPress={() => openComplaints('resolved')}
-                  darkMode={darkMode}
-                  topColor="#16A34A"
-                />
-                <StatCard
-                  title="Pending"
-                  value={String(stats.pending)}
-                  icon={<MaterialIcons name="pending-actions" size={20} color="#F59E0B" />}
-                  onPress={() => openComplaints('pending')}
-                  darkMode={darkMode}
-                  topColor="#F59E0B"
-                />
+                <StatCard title="Resolved" value={stats.resolved} icon="check" color="#16A34A" onPress={() => openComplaints('resolved')} />
+                <StatCard title="Pending" value={stats.pending} icon="pending-actions" color="#F59E0B" onPress={() => openComplaints('pending')} />
               </View>
             </View>
 
-            {/* Trend Chart */}
+            {/* TREND */}
             <Text style={[styles.sectionTitle, { color: darkMode ? '#E5E7EB' : '#111827' }]}>
               Complaint Trends (Last 7 Days)
             </Text>
-            <LineChart
-              data={{
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                datasets: [{ data: complaintTrend }],
-              }}
-              width={width - 36}
-              height={180}
-              chartConfig={{
-                backgroundGradientFrom: darkMode ? '#0B1220' : '#FFFFFF',
-                backgroundGradientTo: darkMode ? '#0B1220' : '#FFFFFF',
-                color: (opacity = 1) => `rgba(37, 99, 235, ${opacity})`,
-                labelColor: (opacity = 1) =>
-                  darkMode ? `rgba(229,231,235, ${opacity})` : `rgba(17,24,39, ${opacity})`,
-                propsForDots: { r: '4', strokeWidth: '2', stroke: '#2563EB' },
-              }}
-              style={{ marginVertical: 10, borderRadius: 12 }}
-            />
+
+            {complaintTrend.length > 0 && (
+              <LineChart
+                data={{ labels: trendLabels, datasets: [{ data: complaintTrend }] }}
+                width={width - 36}
+                height={180}
+                chartConfig={{
+                  backgroundGradientFrom: darkMode ? '#0B1220' : '#FFFFFF',
+                  backgroundGradientTo: darkMode ? '#0B1220' : '#FFFFFF',
+                  color: opacity => `rgba(37, 99, 235, ${opacity})`,
+                  labelColor: opacity =>
+                    darkMode
+                      ? `rgba(229,231,235, ${opacity})`
+                      : `rgba(17,24,39, ${opacity})`,
+                }}
+                style={{ borderRadius: 12 }}
+              />
+            )}
 
             <Text style={[styles.sectionTitle, { color: darkMode ? '#E5E7EB' : '#111827' }]}>
-              Recent Complaints
+              Recent Common Complaints
             </Text>
           </View>
-        }
-        renderItem={renderComplaint}
-        ListFooterComponent={
-          <Text style={[styles.footerText, { color: darkMode ? '#9CA3AF' : '#6B7280' }]}>
-            Data synchronized from EUCL complaint registry
-          </Text>
         }
       />
     </SafeAreaView>
   );
 }
 
-// -------------------- STAT CARD --------------------
-function StatCard({ title, value, icon, onPress, darkMode, topColor }: any) {
+/* -------------------- STAT CARD -------------------- */
+function StatCard({ title, value, icon, onPress, color = '#2563EB' }: any) {
   return (
-    <TouchableOpacity
-      style={[
-        styles.statCard,
-        {
-          backgroundColor: darkMode ? '#1F2937' : '#FFFFFF',
-          borderLeftColor: topColor,
-          borderLeftWidth: 4,
-          shadowColor: '#000',
-          shadowOpacity: 0.1,
-          shadowOffset: { width: 0, height: 2 },
-          shadowRadius: 4,
-        },
-      ]}
-      onPress={onPress}
-    >
-      <View style={styles.cardTop}>
-        <Text style={[styles.cardLabel, { color: darkMode ? '#9CA3AF' : '#6B7280' }]}>{title}</Text>
-        <View>{icon}</View> {/* <-- wrap icon in View */}
-      </View>
-      <Text style={[styles.cardValue, { color: darkMode ? '#F9FAFB' : '#111827' }]}>{value}</Text>
+    <TouchableOpacity style={[styles.statCard, { borderLeftColor: color }]} onPress={onPress}>
+      <Text style={styles.cardLabel}>{title}</Text>
+      <Text style={styles.cardValue}>{value}</Text>
     </TouchableOpacity>
   );
 }
 
-// -------------------- STYLES --------------------
+/* -------------------- STYLES -------------------- */
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  container: { flex: 1, paddingTop: 20, paddingHorizontal: 12 },
-  header: { padding: 20, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, marginBottom: 16 },
-  orgText: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
-  dateText: { fontSize: 13, color: '#D1D5DB', marginTop: 4 },
-  welcomeText: { marginTop: 8, fontSize: 14, color: '#E5E7EB' },
+  container: { padding: 12 },
+  header: { padding: 20, backgroundColor: '#0056B3', borderRadius: 16, marginBottom: 16 },
+  orgText: { color: '#FFF', fontSize: 18, fontWeight: '700' },
+  dateText: { color: '#D1D5DB', marginTop: 4 },
+  welcomeText: { marginTop: 8, color: '#E5E7EB' },
   boldText: { fontWeight: '700' },
-  cardsContainer: { marginBottom: 16 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
-  statCard: { width: cardWidth, borderRadius: 12, padding: 16 },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardLabel: { fontSize: 13 },
-  cardValue: { fontSize: 28, fontWeight: '700', marginTop: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', marginTop: 12, marginBottom: 6 },
+
+  cardsContainer: { marginBottom: 12 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  statCard: { width: cardWidth, backgroundColor: '#FFF', padding: 16, borderRadius: 12, borderLeftWidth: 4 },
+  cardLabel: { color: '#6B7280', fontSize: 13 },
+  cardValue: { fontSize: 26, fontWeight: '700' },
+
+  sectionTitle: { fontSize: 16, fontWeight: '700', marginVertical: 10 },
   tableRow: { flexDirection: 'row', padding: 12, borderRadius: 8, marginBottom: 6 },
   cell: { flex: 1, fontSize: 13 },
-  footerText: { marginTop: 8, fontSize: 12, textAlign: 'center' },
 });
