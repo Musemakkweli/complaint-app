@@ -1,13 +1,13 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Dimensions,
-    FlatList,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import API_URL from '../../constants/api';
@@ -71,8 +71,8 @@ export default function DashboardHome() {
       .then(res => res.json())
       .then(data => {
         setRecentComplaints(
-          data.recent_common_complaints.map((c: any) => ({
-            id: c.id,
+          data.recent_common_complaints.map((c: any, index: number) => ({
+            id: (index + 1).toString(), // sequential numbers
             user: c.user_name,
             type: c.title,
             status: c.status,
@@ -86,8 +86,11 @@ export default function DashboardHome() {
     router.push({ pathname: '/CustomerComplaints', params: { filter } });
   };
 
-  const renderComplaint = ({ item }: any) => (
-    <View style={[styles.tableRow, { backgroundColor: darkMode ? '#1F2937' : '#FFFFFF' }]}>
+  const renderComplaint = ({ item, index }: any) => (
+    <View
+      key={`complaint-${index}`} // unique key
+      style={[styles.tableRow, { backgroundColor: darkMode ? '#1F2937' : '#FFFFFF' }]}
+    >
       <Text style={[styles.cell, { color: darkMode ? '#F9FAFB' : '#111827' }]}>{item.id}</Text>
       <Text style={[styles.cell, { color: darkMode ? '#F9FAFB' : '#111827' }]}>{item.user}</Text>
       <Text style={[styles.cell, { color: darkMode ? '#F9FAFB' : '#111827' }]}>{item.type}</Text>
@@ -113,7 +116,7 @@ export default function DashboardHome() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: darkMode ? '#0B1220' : '#F3F4F6' }]}>
       <FlatList
         data={recentComplaints}
-        keyExtractor={item => item.id}
+        keyExtractor={(item, index) => `complaint-${index}`} // unique key for FlatList
         renderItem={renderComplaint}
         ListHeaderComponent={
           <View style={styles.container}>
@@ -164,6 +167,19 @@ export default function DashboardHome() {
             <Text style={[styles.sectionTitle, { color: darkMode ? '#E5E7EB' : '#111827' }]}>
               Recent Common Complaints
             </Text>
+
+            {/* Table Header */}
+            <View
+              style={[
+                styles.tableRow,
+                { backgroundColor: darkMode ? '#111827' : '#E5E7EB', marginBottom: 4 },
+              ]}
+            >
+              <Text style={[styles.cell, styles.headerCell]}>ID</Text>
+              <Text style={[styles.cell, styles.headerCell]}>Name</Text>
+              <Text style={[styles.cell, styles.headerCell]}>Complaint</Text>
+              <Text style={[styles.cell, styles.headerCell]}>Status</Text>
+            </View>
           </View>
         }
       />
@@ -200,4 +216,5 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: '700', marginVertical: 10 },
   tableRow: { flexDirection: 'row', padding: 12, borderRadius: 8, marginBottom: 6 },
   cell: { flex: 1, fontSize: 13 },
+  headerCell: { fontWeight: '700', fontSize: 14 },
 });
