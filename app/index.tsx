@@ -35,7 +35,7 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://10.197.223.252:8000/login", {
+      const response = await fetch("http://10.197.223.126:8000/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
