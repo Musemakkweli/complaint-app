@@ -5,6 +5,7 @@
     "jsx": "react-native",
     "types": ["react", "react-native"],
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@/*": ["./*"]
     }

@@ -1,21 +1,21 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Dimensions,
-  FlatList,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    FlatList,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
+import API_URL from '../../constants/api';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2;
-const BASE_URL = 'http://10.197.223.252:8000';
 
 export default function DashboardHome() {
   const { theme } = useTheme();
@@ -39,7 +39,7 @@ export default function DashboardHome() {
   useEffect(() => {
     if (!user?.id) return;
 
-    fetch(`${BASE_URL}/complaints/stats/user/${user.id}`)
+    fetch(`${API_URL}/complaints/stats/user/${user.id}`)
       .then(res => res.json())
       .then(data => {
         setStats({
@@ -56,7 +56,7 @@ export default function DashboardHome() {
   useEffect(() => {
     if (!user?.id) return;
 
-    fetch(`${BASE_URL}/complaints/trend/user/${user.id}`)
+    fetch(`${API_URL}/complaints/trend/user/${user.id}`)
       .then(res => res.json())
       .then(data => {
         setTrendLabels(data.trend.map((t: any) => t.day));
@@ -67,7 +67,7 @@ export default function DashboardHome() {
 
   /* -------------------- FETCH RECENT COMMON COMPLAINTS -------------------- */
   useEffect(() => {
-    fetch(`${BASE_URL}/complaints/recent/common?limit=5`)
+    fetch(`${API_URL}/complaints/recent/common?limit=5`)
       .then(res => res.json())
       .then(data => {
         setRecentComplaints(

@@ -4,13 +4,14 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Alert,
-  StatusBar,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    StatusBar,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import API_URL from "../constants/api";
 import { useTheme } from "../context/ThemeContext";
 import { useUser } from "../context/UserContext";
 
@@ -35,7 +36,7 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://10.197.223.126:8000/login", {
+      const response = await fetch(`${API_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { ThemedText } from '../../components/themed-text';
 import { ThemedView } from '../../components/themed-view';
+import API_URL from '../../constants/api';
 import { useTheme } from "../../context/ThemeContext";
 import { useUser } from "../../context/UserContext";
 
@@ -35,7 +36,7 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://http://10.197.223.126:8000/login", {
+      const response = await fetch(`${API_URL}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

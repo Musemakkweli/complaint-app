@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { io, Socket } from 'socket.io-client';
+import API_URL from '../../constants/api';
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -11,7 +12,7 @@ export default function ChatScreen() {
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    const s = io('http://192.168.56.1:8000'); // your backend IP
+    const s = io(API_URL); // use centralized backend URL
     setSocket(s);
 
     s.emit('joinRoom', complaintId);
