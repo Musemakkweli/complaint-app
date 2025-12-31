@@ -59,8 +59,9 @@ export default function DashboardHome() {
     fetch(`${API_URL}/complaints/trend/user/${user.id}`)
       .then(res => res.json())
       .then(data => {
-        setTrendLabels(data.trend.map((t: any) => t.day));
-        setComplaintTrend(data.trend.map((t: any) => t.count));
+        const trend = Array.isArray(data?.trend) ? data.trend : [];
+        setTrendLabels(trend.map((t: any) => t.day));
+        setComplaintTrend(trend.map((t: any) => t.count));
       })
       .catch(err => console.error('Trend error:', err));
   }, [user?.id]);
@@ -70,12 +71,13 @@ export default function DashboardHome() {
     fetch(`${API_URL}/complaints/recent/common?limit=5`)
       .then(res => res.json())
       .then(data => {
+        const recent = Array.isArray(data?.recent_common_complaints) ? data.recent_common_complaints : [];
         setRecentComplaints(
-          data.recent_common_complaints.map((c: any, index: number) => ({
+          recent.map((c: any, index: number) => ({
             id: (index + 1).toString(), // sequential numbers
-            user: c.user_name,
-            type: c.title,
-            status: c.status,
+            user: c.user_name ?? c.user ?? 'Unknown',
+            type: c.title ?? c.type ?? 'Complaint',
+            status: c.status ?? 'Pending',
           }))
         );
       })
@@ -125,7 +127,7 @@ export default function DashboardHome() {
               <Text style={styles.orgText}>EUCL – Customer Complaints System</Text>
               <Text style={styles.dateText}>{new Date().toDateString()}</Text>
               <Text style={styles.welcomeText}>
-                Welcome back, <Text style={styles.boldText}>{user?.full_name ?? 'User'}</Text>
+                Welcome back, <Text style={styles.boldText}>{user?.fullname ?? user?.full_name ?? 'User'}</Text>
               </Text>
             </View>
 
