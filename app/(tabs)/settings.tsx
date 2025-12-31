@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import {
-    FlatList,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 
