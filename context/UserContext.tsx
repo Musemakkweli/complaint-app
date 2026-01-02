@@ -22,12 +22,14 @@ type UserContextType = {
   user: User | null;
   setUser: (user: User) => void;
   clearUser: () => void;
+  logout: () => void; // ✅ added logout
 };
 
 const UserContext = createContext<UserContextType>({
   user: null,
   setUser: () => {},
   clearUser: () => {},
+  logout: () => {}, // ✅ default noop
 });
 
 // -------------------- PROVIDER --------------------
@@ -54,8 +56,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setUserState(null);
   };
 
+  const logout = () => {
+    clearUser();
+    // Optional: navigate to login screen if using react-navigation
+  };
+
   return (
-    <UserContext.Provider value={{ user, setUser, clearUser }}>
+    <UserContext.Provider value={{ user, setUser, clearUser, logout }}>
       {children}
     </UserContext.Provider>
   );

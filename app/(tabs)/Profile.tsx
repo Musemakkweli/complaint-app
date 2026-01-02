@@ -17,7 +17,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 
-const API_URL = 'http://10.197.223.252:8000';
+const API_URL = 'http://172.17.221.252:8000';
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
