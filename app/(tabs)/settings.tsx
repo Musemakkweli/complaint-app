@@ -1,4 +1,5 @@
 import { Feather, MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -29,8 +30,8 @@ type Category = {
 export default function Settings() {
   const { theme, toggleTheme } = useTheme();
   const darkMode = theme === 'dark';
+  const router = useRouter();
 
-  // ---------------- SETTINGS CATEGORIES ----------------
   const [categories] = useState<Category[]>([
     {
       title: 'Account',
@@ -40,13 +41,13 @@ export default function Settings() {
           title: 'Edit Profile',
           subtitle: 'Update your information',
           icon: <Feather name="edit" size={18} color="#0EA5E9" />,
-          onPress: () => Alert.alert('Edit Profile', 'Go to Edit Profile screen'),
+          onPress: () => router.push('/(tabs)/Profile?edit=true'),
         },
         {
           title: 'Security',
           subtitle: 'Change password, 2FA',
           icon: <Feather name="lock" size={18} color="#0EA5E9" />,
-          onPress: () => Alert.alert('Security', 'Go to Security screen'),
+          onPress: () => router.push('/(tabs)/Security'),
         },
       ],
     },
@@ -66,10 +67,10 @@ export default function Settings() {
       icon: <Feather name="bell" size={20} color={darkMode ? '#fff' : '#000'} />,
       options: [
         {
-          title: 'Push Notifications',
+          title: 'Notifications',
           subtitle: 'Manage alerts for complaints',
           icon: <Feather name="bell" size={18} color="#0EA5E9" />,
-          onPress: () => Alert.alert('Notifications', 'Manage notification settings'),
+          onPress: () => router.push('/(tabs)/Notifications'),
         },
       ],
     },
@@ -81,13 +82,13 @@ export default function Settings() {
           title: 'FAQ',
           subtitle: 'Frequently Asked Questions',
           icon: <Feather name="info" size={18} color="#0EA5E9" />,
-          onPress: () => Alert.alert('FAQ', 'Open FAQ'),
+          onPress: () => router.push('/(tabs)/FAQ'),
         },
         {
           title: 'Contact Support',
           subtitle: 'Get help from our team',
           icon: <Feather name="phone" size={18} color="#0EA5E9" />,
-          onPress: () => Alert.alert('Support', 'Contact support'),
+          onPress: () => router.push('/(tabs)/Support'),
         },
       ],
     },
@@ -101,7 +102,18 @@ export default function Settings() {
           onPress: () =>
             Alert.alert('Logout', 'Are you sure you want to logout?', [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Logout', style: 'destructive', onPress: () => console.log('Logged out') },
+              {
+                text: 'Logout',
+                style: 'destructive',
+                onPress: () => {
+                  // Clear user session / token here if needed
+                  console.log('Logged out');
+
+                  // Navigate to index and reset stack
+                  router.replace('/');
+
+                },
+              },
             ]),
         },
       ],
@@ -116,14 +128,12 @@ export default function Settings() {
           { backgroundColor: darkMode ? '#111827' : '#F3F4F6' },
         ]}
       >
-        <View style={{ marginTop: 16 }} />
-
         <Text style={[styles.title, { color: darkMode ? '#fff' : '#000' }]}>Settings</Text>
 
-        {categories?.map((cat, idx) => (
+        {categories.map((cat, idx) => (
           <View key={idx} style={styles.section}>
             <View style={styles.categoryHeader}>
-              {cat.icon && <View style={{ marginRight: 8 }}>{cat.icon}</View>}
+              {cat.icon}
               <Text style={[styles.categoryTitle, { color: darkMode ? '#fff' : '#000' }]}>
                 {cat.title}
               </Text>
@@ -144,7 +154,7 @@ export default function Settings() {
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {opt.icon && <View style={{ marginRight: 12 }}>{opt.icon}</View>}
-                  <View style={{ flexShrink: 1 }}>
+                  <View>
                     <Text style={[styles.optionTitle, { color: darkMode ? '#fff' : '#000' }]}>
                       {opt.title}
                     </Text>
@@ -166,35 +176,17 @@ export default function Settings() {
             ))}
           </View>
         ))}
-
-        <View style={{ height: 60 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    alignSelf: 'center',
-    marginBottom: 24,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  categoryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  categoryTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
+  container: { padding: 16 },
+  title: { fontSize: 28, fontWeight: 'bold', textAlign: 'center', marginBottom: 24 },
+  section: { marginBottom: 24 },
+  categoryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
+  categoryTitle: { fontSize: 18, fontWeight: '600' },
   optionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -204,12 +196,6 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
   },
-  optionTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  optionSubtitle: {
-    fontSize: 12,
-    marginTop: 2,
-  },
+  optionTitle: { fontSize: 16, fontWeight: '500' },
+  optionSubtitle: { fontSize: 12 },
 });

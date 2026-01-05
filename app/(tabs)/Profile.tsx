@@ -1,7 +1,7 @@
 import { Entypo, FontAwesome5, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { activateKeepAwakeAsync } from 'expo-keep-awake';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -17,7 +17,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 
-const API_URL = 'http://172.17.221.252:8000';
+const API_URL = 'http://10.197.223.252:8000';
 
 export default function ProfileScreen() {
   const { theme } = useTheme();

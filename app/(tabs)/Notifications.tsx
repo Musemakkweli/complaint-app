@@ -1,52 +1,92 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-    FlatList,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useUser } from '../../context/UserContext';
+
+const API_URL = 'http://10.197.223.252:8000';
 
 type Notification = {
-  id: number;
+  id: string;
   title: string;
   message: string;
-  time: string;
-  unread: boolean;
+  created_at: string | null;
+  is_read: number;
 };
 
 export default function Notifications() {
   const { theme } = useTheme();
   const darkMode = theme === 'dark';
+  const { user } = useUser();
 
-  const [notes, setNotes] = useState<Notification[]>([
-    { id: 1, title: 'System Update', message: 'The system will be updated tonight at 11pm.', time: '2h ago', unread: true },
-    { id: 2, title: 'New Response', message: 'Support replied to your complaint #23.', time: '1d ago', unread: true },
-    { id: 3, title: 'Welcome', message: 'Thanks for joining ProConnect — get started by submitting a complaint.', time: '3d ago', unread: false },
-  ]);
+  const [notes, setNotes] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const markAllRead = () => {
-    setNotes(prev => prev.map(n => ({ ...n, unread: false })));
+  // Fetch notifications from backend
+  const fetchNotifications = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/notifications/${user.id}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error('Failed to fetch notifications', data.detail);
+        setNotes([]);
+      } else {
+        setNotes(data.notifications || []);
+      }
+    } catch (err) {
+      console.error('Network error fetching notifications', err);
+      setNotes([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleRead = (id: number) => {
-    setNotes(prev => prev.map(n => n.id === id ? { ...n, unread: !n.unread } : n));
+  useEffect(() => {
+    fetchNotifications();
+  }, [user]);
+
+  // Mark all notifications as read locally
+  const markAllRead = () => {
+    setNotes(prev => prev.map(n => ({ ...n, is_read: 1 })));
+    // TODO: Optionally call backend to mark read
+  };
+
+  // Toggle read/unread for a single notification locally
+  const toggleRead = (id: string) => {
+    setNotes(prev =>
+      prev.map(n => n.id === id ? { ...n, is_read: n.is_read ? 0 : 1 } : n)
+    );
+    // TODO: Optionally call backend to update read status
   };
 
   const renderItem = ({ item }: { item: Notification }) => (
     <View
       style={[
         styles.noteCard,
-        { backgroundColor: darkMode ? '#1F2937' : '#fff', borderColor: item.unread ? '#0EA5E9' : 'transparent' },
+        {
+          backgroundColor: darkMode
+            ? item.is_read === 0 ? '#1F2937' : '#111827'
+            : item.is_read === 0 ? '#EDE9FE' : '#fff',
+          borderColor: item.is_read === 0 ? '#0EA5E9' : 'transparent',
+        },
       ]}
     >
       <View style={styles.noteContent}>
         <View
           style={[
             styles.avatar,
-            { backgroundColor: item.unread ? '#0EA5E9' : '#9CA3AF' },
+            { backgroundColor: item.is_read === 0 ? '#0EA5E9' : '#9CA3AF' },
           ]}
         >
           <Text style={styles.avatarText}>
@@ -59,26 +99,32 @@ export default function Notifications() {
           </Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.noteTitle, { color: darkMode ? '#fff' : '#000' }]}>{item.title}</Text>
+          <Text style={[styles.noteTitle, { color: darkMode ? '#fff' : '#111827' }]}>{item.title}</Text>
           <Text style={[styles.noteMessage, { color: darkMode ? '#9CA3AF' : '#6B7280' }]}>{item.message}</Text>
+          {item.created_at && (
+            <Text style={[styles.noteTime, { color: darkMode ? '#9CA3AF' : '#6B7280' }]}>
+              {new Date(item.created_at).toLocaleString()}
+            </Text>
+          )}
         </View>
       </View>
 
-      <View style={styles.noteActions}>
-        <Text style={[styles.noteTime, { color: darkMode ? '#9CA3AF' : '#6B7280' }]}>{item.time}</Text>
-        <TouchableOpacity onPress={() => toggleRead(item.id)}>
-          <Text style={[styles.toggleRead, { color: '#0EA5E9' }]}>
-            {item.unread ? 'Mark read' : 'Mark unread'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity onPress={() => toggleRead(item.id)}>
+        <Text style={[styles.toggleRead, { color: '#0EA5E9' }]}>
+          {item.is_read === 0 ? 'Mark read' : 'Mark unread'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
+
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color={darkMode ? '#fff' : '#000'} />;
 
   return (
     <View style={[styles.container, { backgroundColor: darkMode ? '#111827' : '#F3F4F6' }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: darkMode ? '#fff' : '#000' }]}>Notifications</Text>
+        <Text style={[styles.headerTitle, { color: darkMode ? '#fff' : '#111827' }]}>
+          Notifications ({notes.filter(n => n.is_read === 0).length})
+        </Text>
         <TouchableOpacity style={styles.markAllBtn} onPress={markAllRead}>
           <Text style={styles.markAllText}>Mark all read</Text>
         </TouchableOpacity>
@@ -86,7 +132,7 @@ export default function Notifications() {
 
       <FlatList
         data={notes}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={item => item.id}
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 80 }}
       />
@@ -95,70 +141,17 @@ export default function Notifications() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 80 : 60,
-    paddingHorizontal: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  markAllBtn: {
-    backgroundColor: '#0EA5E9',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-  },
-  markAllText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  noteCard: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  noteContent: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  noteTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  noteMessage: {
-    fontSize: 14,
-    marginTop: 2,
-  },
-  noteActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  noteTime: {
-    fontSize: 12,
-  },
-  toggleRead: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
+  container: { flex: 1, paddingTop: Platform.OS === 'ios' ? 80 : 60, paddingHorizontal: 16 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  headerTitle: { fontSize: 24, fontWeight: 'bold' },
+  markAllBtn: { backgroundColor: '#0EA5E9', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 },
+  markAllText: { color: '#fff', fontWeight: 'bold' },
+  noteCard: { borderWidth: 1, borderRadius: 8, padding: 12, marginBottom: 12 },
+  noteContent: { flexDirection: 'row', marginBottom: 8 },
+  avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { color: '#fff', fontWeight: 'bold' },
+  noteTitle: { fontSize: 16, fontWeight: '600' },
+  noteMessage: { fontSize: 14, marginTop: 2 },
+  noteTime: { fontSize: 12 },
+  toggleRead: { fontSize: 12, fontWeight: '500', marginTop: 4 },
 });

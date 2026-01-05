@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -30,7 +30,6 @@ export default function DashboardHome() {
     resolved: 0,
     pending: 0,
   });
-
   const [trendLabels, setTrendLabels] = useState<string[]>([]);
   const [complaintTrend, setComplaintTrend] = useState<number[]>([]);
   const [recentComplaints, setRecentComplaints] = useState<any[]>([]);
@@ -68,18 +67,32 @@ export default function DashboardHome() {
 
   /* -------------------- FETCH RECENT COMMON COMPLAINTS -------------------- */
   useEffect(() => {
-    fetch(`${API_URL}/complaints/recent/common?limit=5`)
+    fetch(`${API_URL}/complaints/recent/common?limit=20`) // fetch more, filter client-side
       .then(res => res.json())
       .then(data => {
-        const recent = Array.isArray(data?.recent_common_complaints) ? data.recent_common_complaints : [];
-        setRecentComplaints(
-          recent.map((c: any, index: number) => ({
-            id: (index + 1).toString(), // sequential numbers
-            user: c.user_name ?? c.user ?? 'Unknown',
-            type: c.title ?? c.type ?? 'Complaint',
-            status: c.status ?? 'Pending',
-          }))
-        );
+        const recent = Array.isArray(data?.recent_common_complaints)
+          ? data.recent_common_complaints
+          : [];
+
+        // Ensure each user appears only once and max 5 complaints
+        const uniqueUsersMap: Record<string, any> = {};
+        const uniqueComplaints: any[] = [];
+
+        for (const c of recent) {
+          const userName = c.user_name ?? c.user ?? 'Unknown';
+          if (!uniqueUsersMap[userName] && uniqueComplaints.length < 5) {
+            uniqueUsersMap[userName] = true;
+            uniqueComplaints.push({
+              id: (uniqueComplaints.length + 1).toString(),
+              user: userName,
+              type: c.title ?? c.type ?? 'Complaint',
+              status: c.status ?? 'Pending',
+            });
+          }
+          if (uniqueComplaints.length >= 5) break;
+        }
+
+        setRecentComplaints(uniqueComplaints);
       })
       .catch(err => console.error('Recent complaints error:', err));
   }, []);
@@ -90,7 +103,7 @@ export default function DashboardHome() {
 
   const renderComplaint = ({ item, index }: any) => (
     <View
-      key={`complaint-${index}`} // unique key
+      key={`complaint-${index}`}
       style={[styles.tableRow, { backgroundColor: darkMode ? '#1F2937' : '#FFFFFF' }]}
     >
       <Text style={[styles.cell, { color: darkMode ? '#F9FAFB' : '#111827' }]}>{item.id}</Text>
@@ -118,7 +131,7 @@ export default function DashboardHome() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: darkMode ? '#0B1220' : '#F3F4F6' }]}>
       <FlatList
         data={recentComplaints}
-        keyExtractor={(item, index) => `complaint-${index}`} // unique key for FlatList
+        keyExtractor={(item, index) => `complaint-${index}`}
         renderItem={renderComplaint}
         ListHeaderComponent={
           <View style={styles.container}>
@@ -172,15 +185,12 @@ export default function DashboardHome() {
 
             {/* Table Header */}
             <View
-              style={[
-                styles.tableRow,
-                { backgroundColor: darkMode ? '#111827' : '#E5E7EB', marginBottom: 4 },
-              ]}
+              style={[styles.tableRow, { backgroundColor: darkMode ? '#111827' : '#E5E7EB', marginBottom: 4 }]}
             >
-              <Text style={[styles.cell, styles.headerCell]}>ID</Text>
-              <Text style={[styles.cell, styles.headerCell]}>Name</Text>
-              <Text style={[styles.cell, styles.headerCell]}>Complaint</Text>
-              <Text style={[styles.cell, styles.headerCell]}>Status</Text>
+              <Text style={[styles.cell, styles.headerCell, { color: darkMode ? '#FFFFFF' : '#111827' }]}>ID</Text>
+              <Text style={[styles.cell, styles.headerCell, { color: darkMode ? '#FFFFFF' : '#111827' }]}>Name</Text>
+              <Text style={[styles.cell, styles.headerCell, { color: darkMode ? '#FFFFFF' : '#111827' }]}>Complaint</Text>
+              <Text style={[styles.cell, styles.headerCell, { color: darkMode ? '#FFFFFF' : '#111827' }]}>Status</Text>
             </View>
           </View>
         }
