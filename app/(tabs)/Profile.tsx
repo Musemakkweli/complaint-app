@@ -14,10 +14,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+import API_URL from '../../constants/api'; // ✅ CHANGED
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
-
-const API_URL = 'http://10.197.223.252:8000';
 
 export default function ProfileScreen() {
   const { theme } = useTheme();
@@ -31,19 +31,19 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Keep screen awake
+  /* ================= KEEP AWAKE ================= */
   useEffect(() => {
-    const keepAwake = async () => await activateKeepAwakeAsync();
-    keepAwake();
+    activateKeepAwakeAsync();
   }, []);
 
-  // Fetch profile from backend
+  /* ================= FETCH PROFILE ================= */
   const fetchProfile = async () => {
     if (!user) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/user-profile/${user.id}`);
       const data = await res.json();
+
       const profileObj = {
         name: data.user.fullname,
         email: data.user.email,
@@ -55,11 +55,14 @@ export default function ProfileScreen() {
         village: data.profile.village || '',
         about: data.profile.about || '',
       };
+
       setProfileData(profileObj);
       setForm(profileObj);
       setAvatar(
         data.profile.profile_image_url ||
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(profileObj.name)}&background=7c3aed&color=fff&size=512`
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(
+            profileObj.name
+          )}&background=7c3aed&color=fff&size=512`
       );
     } catch (err) {
       console.error('Fetch profile error:', err);
@@ -72,9 +75,9 @@ export default function ProfileScreen() {
     fetchProfile();
   }, [user]);
 
-  // Pick image from gallery
+  /* ================= IMAGE PICKER ================= */
   const pickImage = async () => {
-    const result: ImagePicker.ImagePickerResult = await ImagePicker.launchImageLibraryAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
       allowsEditing: true,
@@ -92,6 +95,7 @@ export default function ProfileScreen() {
     setForm(profileData);
   };
 
+  /* ================= SAVE PROFILE ================= */
   const saveEdit = async () => {
     if (!user || !form) return;
 
@@ -100,7 +104,6 @@ export default function ProfileScreen() {
       const formData = new FormData();
       formData.append('updated', JSON.stringify(form));
 
-      // Only append image if new one selected
       if (avatar && avatar.startsWith('file://')) {
         const filename = avatar.split('/').pop();
         const fileType = filename?.split('.').pop();
@@ -116,36 +119,40 @@ export default function ProfileScreen() {
         body: formData,
         headers: {
           Accept: 'application/json',
-          // DO NOT set Content-Type, fetch handles it
         },
       });
 
       const data = await res.json();
+
       if (!res.ok) {
-        console.error('Update failed', data);
-      } else {
-        // Update frontend state with backend data
-        const profileObj = {
-          name: data.user.fullname,
-          email: data.user.email,
-          phone: data.user.phone || '',
-          province: data.profile.province || '',
-          district: data.profile.district || '',
-          sector: data.profile.sector || '',
-          cell: data.profile.cell || '',
-          village: data.profile.village || '',
-          about: data.profile.about || '',
-        };
-        setProfileData(profileObj);
-        setForm(profileObj);
-        setAvatar(
-          data.profile.profile_image_url ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(profileObj.name)}&background=7c3aed&color=fff&size=512`
-        );
-        setEditing(false);
-        setSuccessMsg('Profile updated!');
-        setTimeout(() => setSuccessMsg(''), 2500);
+        console.error('Update failed:', data);
+        return;
       }
+
+      const profileObj = {
+        name: data.user.fullname,
+        email: data.user.email,
+        phone: data.user.phone || '',
+        province: data.profile.province || '',
+        district: data.profile.district || '',
+        sector: data.profile.sector || '',
+        cell: data.profile.cell || '',
+        village: data.profile.village || '',
+        about: data.profile.about || '',
+      };
+
+      setProfileData(profileObj);
+      setForm(profileObj);
+      setAvatar(
+        data.profile.profile_image_url ||
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(
+            profileObj.name
+          )}&background=7c3aed&color=fff&size=512`
+      );
+
+      setEditing(false);
+      setSuccessMsg('Profile updated!');
+      setTimeout(() => setSuccessMsg(''), 2500);
     } catch (err) {
       console.error('Error updating profile:', err);
     } finally {
@@ -153,7 +160,15 @@ export default function ProfileScreen() {
     }
   };
 
-  if (!profileData || loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color={darkMode ? '#fff' : '#000'} />;
+  if (!profileData || loading) {
+    return (
+      <ActivityIndicator
+        style={{ flex: 1 }}
+        size="large"
+        color={darkMode ? '#fff' : '#000'}
+      />
+    );
+  }
 
   const fields = [
     { key: 'email', icon: <MaterialIcons name="email" size={18} color="#7C3AED" />, label: 'Email' },
@@ -167,45 +182,115 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}>
-      <ScrollView contentContainerStyle={[styles.container, { backgroundColor: darkMode ? '#111827' : '#F3F4F6' }]} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          { backgroundColor: darkMode ? '#111827' : '#F3F4F6' },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.cardWrapper}>
-          <View style={[styles.card, { backgroundColor: darkMode ? '#1F2937' : '#fff' }]}>
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: darkMode ? '#1F2937' : '#fff' },
+            ]}
+          >
             <View style={styles.avatarContainer}>
               <Image source={{ uri: avatar! }} style={styles.avatar} />
-              <TouchableOpacity style={styles.avatarButton} onPress={pickImage}>
+              <TouchableOpacity
+                style={styles.avatarButton}
+                onPress={pickImage}
+              >
                 <Text style={styles.avatarButtonText}>+</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.headerRow}>
-              <Text style={[styles.name, { color: darkMode ? '#fff' : '#111827' }]}>{form.name}</Text>
+              <Text
+                style={[
+                  styles.name,
+                  { color: darkMode ? '#fff' : '#111827' },
+                ]}
+              >
+                {form.name}
+              </Text>
+
               {!editing ? (
-                <TouchableOpacity style={styles.editButton} onPress={startEdit}>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={startEdit}
+                >
                   <Text style={styles.buttonText}>Edit</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.buttonsRow}>
-                  <TouchableOpacity style={styles.cancelButton} onPress={cancelEdit}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={cancelEdit}
+                  >
                     <Text style={styles.cancelText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={saveEdit}
+                  >
                     <Text style={styles.buttonText}>Save</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </View>
 
-            {successMsg ? <Text style={styles.success}>{successMsg}</Text> : null}
+            {successMsg ? (
+              <Text style={styles.success}>{successMsg}</Text>
+            ) : null}
 
             <View style={styles.infoContainer}>
-              {fields.map(f => (
+              {fields.map((f) => (
                 <View key={f.key} style={styles.infoRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>{f.icon}<Text style={[styles.label, { color: darkMode ? '#9CA3AF' : '#6B7280' }]}>{f.label}</Text></View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    {f.icon}
+                    <Text
+                      style={[
+                        styles.label,
+                        { color: darkMode ? '#9CA3AF' : '#6B7280' },
+                      ]}
+                    >
+                      {f.label}
+                    </Text>
+                  </View>
+
                   {!editing ? (
-                    <Text style={[styles.value, { color: darkMode ? '#fff' : '#111827' }]}>{form[f.key]}</Text>
+                    <Text
+                      style={[
+                        styles.value,
+                        { color: darkMode ? '#fff' : '#111827' },
+                      ]}
+                    >
+                      {form[f.key]}
+                    </Text>
                   ) : (
-                    <TextInput value={form[f.key]} onChangeText={text => setForm({ ...form, [f.key]: text })} style={styles.input} placeholderTextColor={darkMode ? '#9CA3AF' : '#6B7280'} />
+                    <TextInput
+                      value={form[f.key]}
+                      onChangeText={(text) =>
+                        setForm({ ...form, [f.key]: text })
+                      }
+                      style={styles.input}
+                      placeholderTextColor={
+                        darkMode ? '#9CA3AF' : '#6B7280'
+                      }
+                    />
                   )}
                 </View>
               ))}
@@ -217,6 +302,7 @@ export default function ProfileScreen() {
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   container: { flexGrow: 1, justifyContent: 'center', padding: 16, paddingBottom: 40 },
   cardWrapper: { flex: 1, justifyContent: 'center' },

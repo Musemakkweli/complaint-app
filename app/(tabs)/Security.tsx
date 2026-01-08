@@ -2,21 +2,21 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+
+import API_URL from '../../constants/api'; // ✅ UPDATED
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
-
-const API_URL = 'http://10.197.223.252:8000';
 
 export default function Security() {
   const { theme } = useTheme();
@@ -29,6 +29,7 @@ export default function Security() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  /* ================= CHANGE PASSWORD ================= */
   const handleChangePassword = async () => {
     if (!user) return;
 
@@ -78,6 +79,7 @@ export default function Security() {
     }
   };
 
+  /* ================= RENDER ================= */
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -138,6 +140,7 @@ export default function Security() {
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 16 },
   backButton: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },

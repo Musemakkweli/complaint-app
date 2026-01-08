@@ -8,10 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+import API_URL from '../../constants/api'; // ✅ CHANGED
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
-
-const API_URL = 'http://10.197.223.252:8000';
 
 type Notification = {
   id: string;
@@ -29,7 +29,7 @@ export default function Notifications() {
   const [notes, setNotes] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch notifications from backend
+  /* ================= FETCH NOTIFICATIONS ================= */
   const fetchNotifications = async () => {
     if (!user) return;
 
@@ -56,20 +56,22 @@ export default function Notifications() {
     fetchNotifications();
   }, [user]);
 
-  // Mark all notifications as read locally
+  /* ================= LOCAL READ STATE ================= */
   const markAllRead = () => {
     setNotes(prev => prev.map(n => ({ ...n, is_read: 1 })));
-    // TODO: Optionally call backend to mark read
+    // TODO: call backend if needed
   };
 
-  // Toggle read/unread for a single notification locally
   const toggleRead = (id: string) => {
     setNotes(prev =>
-      prev.map(n => n.id === id ? { ...n, is_read: n.is_read ? 0 : 1 } : n)
+      prev.map(n =>
+        n.id === id ? { ...n, is_read: n.is_read ? 0 : 1 } : n
+      )
     );
-    // TODO: Optionally call backend to update read status
+    // TODO: call backend if needed
   };
 
+  /* ================= RENDER ITEM ================= */
   const renderItem = ({ item }: { item: Notification }) => (
     <View
       style={[
@@ -98,11 +100,33 @@ export default function Notifications() {
               .toUpperCase()}
           </Text>
         </View>
+
         <View style={{ flex: 1 }}>
-          <Text style={[styles.noteTitle, { color: darkMode ? '#fff' : '#111827' }]}>{item.title}</Text>
-          <Text style={[styles.noteMessage, { color: darkMode ? '#9CA3AF' : '#6B7280' }]}>{item.message}</Text>
+          <Text
+            style={[
+              styles.noteTitle,
+              { color: darkMode ? '#fff' : '#111827' },
+            ]}
+          >
+            {item.title}
+          </Text>
+
+          <Text
+            style={[
+              styles.noteMessage,
+              { color: darkMode ? '#9CA3AF' : '#6B7280' },
+            ]}
+          >
+            {item.message}
+          </Text>
+
           {item.created_at && (
-            <Text style={[styles.noteTime, { color: darkMode ? '#9CA3AF' : '#6B7280' }]}>
+            <Text
+              style={[
+                styles.noteTime,
+                { color: darkMode ? '#9CA3AF' : '#6B7280' },
+              ]}
+            >
               {new Date(item.created_at).toLocaleString()}
             </Text>
           )}
@@ -117,14 +141,33 @@ export default function Notifications() {
     </View>
   );
 
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" color={darkMode ? '#fff' : '#000'} />;
+  if (loading) {
+    return (
+      <ActivityIndicator
+        style={{ flex: 1 }}
+        size="large"
+        color={darkMode ? '#fff' : '#000'}
+      />
+    );
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: darkMode ? '#111827' : '#F3F4F6' }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: darkMode ? '#111827' : '#F3F4F6' },
+      ]}
+    >
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: darkMode ? '#fff' : '#111827' }]}>
+        <Text
+          style={[
+            styles.headerTitle,
+            { color: darkMode ? '#fff' : '#111827' },
+          ]}
+        >
           Notifications ({notes.filter(n => n.is_read === 0).length})
         </Text>
+
         <TouchableOpacity style={styles.markAllBtn} onPress={markAllRead}>
           <Text style={styles.markAllText}>Mark all read</Text>
         </TouchableOpacity>
@@ -140,15 +183,42 @@ export default function Notifications() {
   );
 }
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: Platform.OS === 'ios' ? 80 : 60, paddingHorizontal: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  container: {
+    flex: 1,
+    paddingTop: Platform.OS === 'ios' ? 80 : 60,
+    paddingHorizontal: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   headerTitle: { fontSize: 24, fontWeight: 'bold' },
-  markAllBtn: { backgroundColor: '#0EA5E9', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 },
+  markAllBtn: {
+    backgroundColor: '#0EA5E9',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
   markAllText: { color: '#fff', fontWeight: 'bold' },
-  noteCard: { borderWidth: 1, borderRadius: 8, padding: 12, marginBottom: 12 },
+  noteCard: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
   noteContent: { flexDirection: 'row', marginBottom: 8 },
-  avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12, justifyContent: 'center', alignItems: 'center' },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   avatarText: { color: '#fff', fontWeight: 'bold' },
   noteTitle: { fontSize: 16, fontWeight: '600' },
   noteMessage: { fontSize: 14, marginTop: 2 },

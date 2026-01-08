@@ -8,13 +8,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
 import { useUser } from "../../context/UserContext";
 
-const API_URL = "http://10.197.223.252:8000";
-const WS_URL = "wss://mababa-api.onrender.com/ws/"; // WebSocket server
+import API_URL from "../../constants/api";
+import WS_URL from "../../constants/ws";
 
 type Complaint = {
   id: number;
@@ -46,6 +46,7 @@ export default function CustomerComplaints() {
     border: theme === "dark" ? "#475569" : "#E5E7EB",
     primary: "#3B82F6",
     submit: "#10B981",
+    cancel: "#A1A1AA", // grey for cancel
   };
 
   const [complaints, setComplaints] = useState<Complaint[]>([]);
@@ -71,13 +72,17 @@ export default function CustomerComplaints() {
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
 
   // Fetch complaints
-  useEffect(() => {
+  const fetchComplaints = () => {
     fetch(`${API_URL}/complaints/user/${userId}`)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setComplaints(data);
       })
       .catch((err) => console.error("Fetch error:", err));
+  };
+
+  useEffect(() => {
+    fetchComplaints();
   }, [userId]);
 
   const filteredComplaints = useMemo(() => {
@@ -88,7 +93,6 @@ export default function CustomerComplaints() {
   // Submit or edit complaint
   const submitComplaint = async () => {
     if (!newTitle.trim()) return alert("Title cannot be blank.");
-
     setLoading(true);
     try {
       if (editingComplaint) {
@@ -102,8 +106,6 @@ export default function CustomerComplaints() {
           }),
         });
         if (!res.ok) return alert("Failed to edit complaint.");
-        const updated: Complaint = await res.json();
-        setComplaints((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
       } else {
         const res = await fetch(`${API_URL}/complaints`, {
           method: "POST",
@@ -117,15 +119,13 @@ export default function CustomerComplaints() {
           }),
         });
         if (!res.ok) return alert("Failed to submit complaint.");
-        const created: Complaint = await res.json();
-        if (created?.id) setComplaints((prev) => [created, ...prev]);
       }
-
       setShowModal(false);
       setEditingComplaint(null);
       setNewTitle("");
       setNewDesc("");
       setNewType("common");
+      fetchComplaints();
     } catch (err) {
       console.error("Submit error:", err);
     } finally {
@@ -133,63 +133,74 @@ export default function CustomerComplaints() {
     }
   };
 
-  // Delete complaint
   const deleteComplaint = async (id: number) => {
     if (!confirm("Are you sure you want to delete this complaint?")) return;
     try {
       const res = await fetch(`${API_URL}/complaints/${id}`, { method: "DELETE" });
-      if (res.ok) setComplaints((prev) => prev.filter((c) => c.id !== id));
+      if (res.ok) fetchComplaints();
       else alert("Failed to delete complaint.");
     } catch (err) {
       console.error("Delete error:", err);
     }
   };
 
-  // Open chat for a complaint
   const openChat = (complaintId: number) => {
     setActiveComplaintId(complaintId);
     setChatModal(true);
 
-    // Initialize WebSocket
-    wsRef.current = new WebSocket(WS_URL);
+    try {
+      wsRef.current = new WebSocket(WS_URL);
 
-    wsRef.current.onopen = () => {
-      console.log("WebSocket connected");
-    };
+      wsRef.current.onopen = () => console.log("WebSocket connected");
 
-    wsRef.current.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.sender && data.receiver && data.content) {
-          setCurrentChat((prev) => [...prev, { sender: data.sender, text: data.content, timestamp: new Date().toISOString() }]);
+      wsRef.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.sender && data.receiver && data.content) {
+            setCurrentChat((prev) => [
+              ...prev,
+              { sender: data.sender, text: data.content, timestamp: new Date().toISOString() },
+            ]);
+          }
+        } catch (err) {
+          console.error("Failed to parse WS message", err);
         }
-      } catch (e) {
-        console.error("WS parse error", e);
-      }
-    };
+      };
 
-    wsRef.current.onclose = () => console.log("WebSocket closed");
-    wsRef.current.onerror = (e) => console.error("WebSocket error", e);
+      wsRef.current.onerror = (err) => {
+        console.error("WebSocket connection error:", err);
+        alert("WebSocket failed to connect. Check your server or network.");
+      };
+
+      wsRef.current.onclose = () => console.log("WebSocket closed");
+    } catch (err) {
+      console.error("WebSocket creation error:", err);
+      alert("WebSocket cannot be created. Check the URL.");
+    }
   };
 
   const sendMessage = () => {
     if (!chatInput.trim()) return;
     const msg: ChatMessage = { sender: "user", text: chatInput, timestamp: new Date().toISOString() };
     setCurrentChat((prev) => [...prev, msg]);
-
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ sender: user?.full_name || "user", receiver: "employee", content: chatInput }));
+      wsRef.current.send(
+        JSON.stringify({ sender: user?.full_name || "user", receiver: "employee", content: chatInput })
+      );
     }
-
     setChatInput("");
   };
 
   const statusColor = (status: Complaint["status"]) => {
     switch (status) {
-      case "pending": return "#F59E0B";
-      case "assigned": return "#3B82F6";
-      case "resolved": return "#10B981";
-      default: return colors.text;
+      case "pending":
+        return "#F59E0B";
+      case "assigned":
+        return "#3B82F6";
+      case "resolved":
+        return "#10B981";
+      default:
+        return colors.text;
     }
   };
 
@@ -230,36 +241,69 @@ export default function CustomerComplaints() {
           <Text style={{ color: "#fff", fontWeight: "bold" }}>+ New Complaint</Text>
         </TouchableOpacity>
 
+        {/* No complaints */}
+        {filteredComplaints.length === 0 && (
+          <Text style={{ color: colors.text, textAlign: "center", marginTop: 20 }}>
+            No complaints found. Create one using "+ New Complaint".
+          </Text>
+        )}
+
         {/* Complaint List */}
         <FlatList
           data={filteredComplaints}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <TouchableOpacity
+              style={[styles.card, { backgroundColor: colors.card }]}
+              onPress={() => {
+                setActiveComplaint(item);
+                setViewModal(true);
+              }}
+            >
               <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
               <Text style={{ color: statusColor(item.status) }}>Status: {item.status}</Text>
               <Text style={{ color: colors.text }}>Type: {item.complaint_type}</Text>
 
-              {/* Chat button */}
               {item.status === "assigned" && item.employee_id && (
                 <TouchableOpacity
                   onPress={() => openChat(item.id)}
-                  style={[styles.modalSubmit, { marginTop: 8, paddingHorizontal: 12, backgroundColor: "#10B981" }]}
+                  style={[styles.chatButton, { backgroundColor: "#10B981" }]}
                 >
-                  <Text style={{ color: "#fff" }}>Chat</Text>
+                  <Text style={{ color: "#fff", fontSize: 12 }}>Chat</Text>
                 </TouchableOpacity>
               )}
 
-              {/* Options button */}
               <TouchableOpacity
                 onPress={() => openOptions(item)}
                 style={{ position: "absolute", top: 10, right: 10, padding: 6 }}
               >
                 <Text style={{ fontSize: 22, color: colors.text }}>⋮</Text>
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           )}
         />
+
+        {/* View Complaint Modal */}
+        <Modal visible={viewModal} transparent animationType="slide">
+          <KeyboardAvoidingView style={styles.modalContainer}>
+            <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Complaint Details</Text>
+              <Text style={{ fontWeight: "bold", color: colors.text }}>Title:</Text>
+              <Text style={{ marginBottom: 10, color: colors.text }}>{activeComplaint?.title}</Text>
+              <Text style={{ fontWeight: "bold", color: colors.text }}>Description:</Text>
+              <Text style={{ marginBottom: 10, color: colors.text }}>{activeComplaint?.description}</Text>
+              <Text style={{ fontWeight: "bold", color: colors.text }}>Type:</Text>
+              <Text style={{ marginBottom: 10, color: colors.text }}>{activeComplaint?.complaint_type}</Text>
+              <Text style={{ fontWeight: "bold", color: colors.text }}>Status:</Text>
+              <Text style={{ marginBottom: 10, color: statusColor(activeComplaint?.status || "pending") }}>
+                {activeComplaint?.status}
+              </Text>
+              <TouchableOpacity onPress={() => setViewModal(false)}>
+                <Text style={{ color: colors.text, textAlign: "center" }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
 
         {/* Chat Modal */}
         <Modal visible={chatModal} transparent animationType="slide">
@@ -309,7 +353,88 @@ export default function CustomerComplaints() {
           </KeyboardAvoidingView>
         </Modal>
 
-        {/* Add/Edit Modal, View Modal, Options Modal remain unchanged */}
+        {/* Add/Edit Modal */}
+        <Modal visible={showModal} transparent animationType="slide">
+          <KeyboardAvoidingView style={styles.modalContainer}>
+            <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {editingComplaint ? "Edit Complaint" : "New Complaint"}
+              </Text>
+              <TextInput
+                value={newTitle}
+                onChangeText={setNewTitle}
+                placeholder="Title"
+                style={[styles.input, { color: colors.text }]}
+              />
+              <TextInput
+                value={newDesc}
+                onChangeText={setNewDesc}
+                placeholder="Description"
+                multiline
+                style={[styles.input, { height: 80, color: colors.text }]}
+              />
+              <View style={{ flexDirection: "row", marginBottom: 12 }}>
+                {["common", "private"].map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    onPress={() => setNewType(t as any)}
+                    style={[
+                      styles.typeButton,
+                      { backgroundColor: newType === t ? colors.primary : colors.border },
+                    ]}
+                  >
+                    <Text style={{ color: newType === t ? "#fff" : colors.text }}>{t}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <TouchableOpacity style={[styles.modalSubmit, { flex: 1, marginRight: 8 }]} onPress={submitComplaint} disabled={loading}>
+                  <Text style={{ color: "#fff", textAlign: "center" }}>{editingComplaint ? "Save" : "Submit"}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modalCancel, { flex: 1 }]} onPress={() => setShowModal(false)}>
+                  <Text style={{ color: colors.cancel, textAlign: "center" }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Options Modal */}
+        <Modal visible={optionsModal} transparent animationType="slide">
+          <KeyboardAvoidingView style={styles.modalContainer}>
+            <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Options</Text>
+              <TouchableOpacity
+                style={[styles.optionButton, { backgroundColor: colors.border, borderRadius: 6, marginBottom: 8, padding: 10 }]}
+                onPress={() => {
+                  setEditingComplaint(selectedComplaint);
+                  setNewTitle(selectedComplaint?.title || "");
+                  setNewDesc(selectedComplaint?.description || "");
+                  setNewType(selectedComplaint?.complaint_type || "common");
+                  setOptionsModal(false);
+                  setShowModal(true);
+                }}
+              >
+                <Text style={{ color: colors.text, textAlign: "center" }}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.optionButton, { backgroundColor: colors.border, borderRadius: 6, marginBottom: 8, padding: 10 }]}
+                onPress={() => {
+                  if (selectedComplaint) deleteComplaint(selectedComplaint.id);
+                  setOptionsModal(false);
+                }}
+              >
+                <Text style={{ color: colors.text, textAlign: "center" }}>Delete</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.optionButton, { backgroundColor: colors.border, borderRadius: 6, padding: 10 }]}
+                onPress={() => setOptionsModal(false)}
+              >
+                <Text style={{ color: colors.text, textAlign: "center" }}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
       </View>
     </View>
   );
@@ -326,6 +451,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: "bold", marginBottom: 6 },
   smallButton: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6, alignItems: "center", justifyContent: "center" },
   buttonText: { color: "#fff", fontSize: 14, fontWeight: "500" },
+  chatButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6, alignSelf: "flex-start", marginTop: 8 },
   modalContainer: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center" },
   modalContent: { width: "90%", borderRadius: 12, padding: 20, maxHeight: "90%" },
   chatContent: { width: "90%", borderRadius: 12, padding: 16, height: "70%" },
