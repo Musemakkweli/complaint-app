@@ -15,10 +15,11 @@ import {
   View,
 } from 'react-native';
 
-import API_URL from '../../constants/api'; // ✅ CHANGED
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 
+
+const API_URL = 'http://192.168.1.80:8000'; // replace with your PC's LAN IP
 export default function ProfileScreen() {
   const { theme } = useTheme();
   const darkMode = theme === 'dark';
