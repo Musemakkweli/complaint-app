@@ -15,11 +15,10 @@ import {
   View,
 } from 'react-native';
 
+import API_URL from "../../constants/api";
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 
-
-const API_URL = 'http://192.168.1.80:8000'; // replace with your PC's LAN IP
 export default function ProfileScreen() {
   const { theme } = useTheme();
   const darkMode = theme === 'dark';
@@ -59,11 +58,12 @@ export default function ProfileScreen() {
 
       setProfileData(profileObj);
       setForm(profileObj);
+
       setAvatar(
         data.profile.profile_image_url ||
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(
-            profileObj.name
-          )}&background=7c3aed&color=fff&size=512`
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          profileObj.name
+        )}&background=7c3aed&color=fff&size=512`
       );
     } catch (err) {
       console.error('Fetch profile error:', err);
@@ -79,14 +79,48 @@ export default function ProfileScreen() {
   /* ================= IMAGE PICKER ================= */
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // keep this for your expo version
       allowsEditing: true,
+      quality: 0.7,
       aspect: [1, 1],
     });
 
     if (!result.canceled && result.assets?.[0]?.uri) {
-      setAvatar(result.assets[0].uri);
+      const localUri = result.assets[0].uri;
+      setLoading(true);
+
+      try {
+        const filename = localUri.split('/').pop();
+        const fileType = filename?.split('.').pop();
+
+        const formData = new FormData();
+        formData.append('file', {
+          uri: localUri,
+          name: filename,
+          type: `image/${fileType}`,
+        } as any);
+
+        // Upload to your backend
+        const res = await fetch(`${API_URL}/upload-test/`, {
+          method: 'POST',
+          body: formData,
+          headers: { Accept: 'application/json' },
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.url) {
+          setAvatar(data.url);
+          setSuccessMsg('Image uploaded!');
+          setTimeout(() => setSuccessMsg(''), 2500);
+        } else {
+          console.error('Image upload failed:', data);
+        }
+      } catch (err) {
+        console.error('Image upload failed:', err);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -105,6 +139,7 @@ export default function ProfileScreen() {
       const formData = new FormData();
       formData.append('updated', JSON.stringify(form));
 
+      // Only append if avatar is a local file
       if (avatar && avatar.startsWith('file://')) {
         const filename = avatar.split('/').pop();
         const fileType = filename?.split('.').pop();
@@ -118,9 +153,7 @@ export default function ProfileScreen() {
       const res = await fetch(`${API_URL}/user-profile/${user.id}`, {
         method: 'PUT',
         body: formData,
-        headers: {
-          Accept: 'application/json',
-        },
+        headers: { Accept: 'application/json' },
       });
 
       const data = await res.json();
@@ -144,11 +177,12 @@ export default function ProfileScreen() {
 
       setProfileData(profileObj);
       setForm(profileObj);
+
       setAvatar(
         data.profile.profile_image_url ||
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(
-            profileObj.name
-          )}&background=7c3aed&color=fff&size=512`
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          profileObj.name
+        )}&background=7c3aed&color=fff&size=512`
       );
 
       setEditing(false);
@@ -214,83 +248,55 @@ export default function ProfileScreen() {
 
             <View style={styles.headerRow}>
               <Text
-                style={[
-                  styles.name,
-                  { color: darkMode ? '#fff' : '#111827' },
-                ]}
+                style={[styles.name, { color: darkMode ? '#fff' : '#111827' }]}
               >
                 {form.name}
               </Text>
 
               {!editing ? (
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={startEdit}
-                >
+                <TouchableOpacity style={styles.editButton} onPress={startEdit}>
                   <Text style={styles.buttonText}>Edit</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.buttonsRow}>
-                  <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={cancelEdit}
-                  >
+                  <TouchableOpacity style={styles.cancelButton} onPress={cancelEdit}>
                     <Text style={styles.cancelText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={saveEdit}
-                  >
+                  <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
                     <Text style={styles.buttonText}>Save</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </View>
 
-            {successMsg ? (
-              <Text style={styles.success}>{successMsg}</Text>
-            ) : null}
+            {successMsg ? <Text style={styles.success}>{successMsg}</Text> : null}
 
             <View style={styles.infoContainer}>
               {fields.map((f) => (
                 <View key={f.key} style={styles.infoRow}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
-                  >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     {f.icon}
-                    <Text
-                      style={[
-                        styles.label,
-                        { color: darkMode ? '#9CA3AF' : '#6B7280' },
-                      ]}
-                    >
+                    <Text style={[styles.label, { color: darkMode ? '#9CA3AF' : '#6B7280' }]}>
                       {f.label}
                     </Text>
                   </View>
 
                   {!editing ? (
-                    <Text
-                      style={[
-                        styles.value,
-                        { color: darkMode ? '#fff' : '#111827' },
-                      ]}
-                    >
+                    <Text style={[styles.value, { color: darkMode ? '#fff' : '#111827' }]}>
                       {form[f.key]}
                     </Text>
                   ) : (
                     <TextInput
                       value={form[f.key]}
-                      onChangeText={(text) =>
-                        setForm({ ...form, [f.key]: text })
-                      }
-                      style={styles.input}
-                      placeholderTextColor={
-                        darkMode ? '#9CA3AF' : '#6B7280'
-                      }
+                      onChangeText={(text) => setForm({ ...form, [f.key]: text })}
+                      style={[
+                        styles.input,
+                        {
+                          color: darkMode ? '#fff' : '#111827',
+                          borderColor: darkMode ? '#374151' : '#D1D5DB',
+                        },
+                      ]}
+                      placeholderTextColor={darkMode ? '#9CA3AF' : '#6B7280'}
                     />
                   )}
                 </View>
@@ -325,5 +331,5 @@ const styles = StyleSheet.create({
   infoRow: { marginBottom: 12, justifyContent: 'space-between' },
   label: { fontSize: 14 },
   value: { fontSize: 16, fontWeight: '500' },
-  input: { borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 6, paddingHorizontal: 10, paddingVertical: Platform.OS === 'ios' ? 10 : 6, fontSize: 16, color: '#111827', marginTop: 4 },
+  input: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: Platform.OS === 'ios' ? 10 : 6, fontSize: 16, marginTop: 4 },
 });
