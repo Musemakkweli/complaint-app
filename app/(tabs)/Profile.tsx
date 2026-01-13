@@ -25,7 +25,8 @@ export default function ProfileScreen() {
   const { user } = useUser();
 
   const [profileData, setProfileData] = useState<any>(null);
-  const [avatar, setAvatar] = useState<string | null>(null);
+  const [avatar, setAvatar] = useState<string | null>('https://bwxwqmtalpwizbukbqcb.supabase.co/storage/v1/object/public/rossa/test/ai-literacy.png');
+  const [imageFailed, setImageFailed] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -59,12 +60,13 @@ export default function ProfileScreen() {
       setProfileData(profileObj);
       setForm(profileObj);
 
-      setAvatar(
-        data.profile.profile_image_url ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          profileObj.name
-        )}&background=7c3aed&color=fff&size=512`
-      );
+      // Avatar is now hardcoded, no need to set from API
+      // setAvatar(
+      //   data.profile.profile_image_url ||
+      //   `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      //     profileObj.name
+      //   )}&background=7c3aed&color=fff&size=512`
+      // );
     } catch (err) {
       console.error('Fetch profile error:', err);
     } finally {
@@ -111,6 +113,7 @@ export default function ProfileScreen() {
 
         if (res.ok && data.url) {
           setAvatar(data.url);
+          setImageFailed(false);
           setSuccessMsg('Image uploaded!');
           setTimeout(() => setSuccessMsg(''), 2500);
         } else {
@@ -178,12 +181,13 @@ export default function ProfileScreen() {
       setProfileData(profileObj);
       setForm(profileObj);
 
-      setAvatar(
-        data.profile.profile_image_url ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          profileObj.name
-        )}&background=7c3aed&color=fff&size=512`
-      );
+      // Avatar is now hardcoded, no need to set from API
+      // setAvatar(
+      //   data.profile.profile_image_url ||
+      //   `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      //     profileObj.name
+      //   )}&background=7c3aed&color=fff&size=512`
+      // );
 
       setEditing(false);
       setSuccessMsg('Profile updated!');
@@ -237,7 +241,14 @@ export default function ProfileScreen() {
             ]}
           >
             <View style={styles.avatarContainer}>
-              <Image source={{ uri: avatar! }} style={styles.avatar} />
+              <Image
+                source={imageFailed ? require('../../assets/images/m11.jpg') : { uri: avatar! }}
+                style={styles.avatar}
+                onError={(e) => {
+                  console.warn('Avatar image load error', e.nativeEvent);
+                  setImageFailed(true);
+                }}
+              />
               <TouchableOpacity
                 style={styles.avatarButton}
                 onPress={pickImage}
